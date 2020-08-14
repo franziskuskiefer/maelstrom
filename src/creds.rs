@@ -25,10 +25,10 @@ pub struct Identity {
 }
 
 impl Identity {
-    pub fn new(ciphersuite: Ciphersuite, id: Vec<u8>) -> Self {
+    pub fn new(ciphersuite: Ciphersuite, id: &[u8]) -> Self {
         let keypair = ciphersuite.new_signature_keypair();
         Self {
-            id,
+            id: id.to_owned(),
             ciphersuite,
             keypair,
         }
@@ -174,7 +174,7 @@ fn generate_key_package() {
     use crate::key_packages::*;
     let identity = Identity::new(
         Ciphersuite::new(CiphersuiteName::MLS10_128_DHKEMX25519_CHACHA20POLY1305_SHA256_Ed25519),
-        vec![1, 2, 3],
+        &[1, 2, 3],
     );
     let kp_bundle = KeyPackageBundle::new(
         Ciphersuite::new(CiphersuiteName::MLS10_128_DHKEMX25519_CHACHA20POLY1305_SHA256_Ed25519),

@@ -305,9 +305,11 @@ impl Ciphersuite {
 // Some internals.
 
 impl HPKEPublicKey {
+    #[cfg(test)]
     pub(crate) fn as_slice(&self) -> &[u8] {
         &self.value
     }
+
     pub(crate) fn from_slice(bytes: &[u8]) -> Self {
         Self {
             value: bytes.to_vec(),

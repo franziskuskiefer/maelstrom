@@ -322,28 +322,6 @@ impl Tree {
         NodeIndex::from(self.nodes.len())
     }
 
-    pub fn root(&self) -> Node {
-        let root_index = treemath::root(self.leaf_count());
-        self.nodes[root_index.as_usize()].clone()
-    }
-
-    pub fn nodes_from_path(&self, path: Vec<usize>) -> Vec<Node> {
-        let mut nodes: Vec<Node> = vec![];
-        for i in path {
-            nodes.push(self.nodes[i].clone());
-        }
-        nodes
-    }
-
-    pub fn public_keys_from_path(&self, path: Vec<usize>) -> Vec<HPKEPublicKey> {
-        let mut keys = Vec::new();
-        for index in path {
-            let key = self.nodes[index].clone().node.unwrap().public_key;
-            keys.push(key);
-        }
-        keys
-    }
-
     pub fn public_key_tree(&self) -> Vec<Option<Node>> {
         let mut tree = vec![];
         for node in self.nodes.iter() {
@@ -354,10 +332,6 @@ impl Tree {
             }
         }
         tree
-    }
-
-    pub fn own_leaf(&self) -> Node {
-        self.nodes[self.own_leaf.leaf_index.as_usize()].clone()
     }
 
     pub fn leaf_count(&self) -> LeafIndex {
@@ -402,14 +376,6 @@ impl Tree {
             self.nodes[index.as_usize()].blank();
         }
     }
-    pub fn first_free_leaf(&self) -> Option<NodeIndex> {
-        for i in 0..self.leaf_count().as_usize() {
-            if self.nodes[NodeIndex::from(LeafIndex::from(i)).as_usize()].is_blank() {
-                return Some(NodeIndex::from(i));
-            }
-        }
-        None
-    }
     pub fn free_leaves(&self) -> Vec<NodeIndex> {
         let mut free_leaves = vec![];
         for i in 0..self.leaf_count().as_usize() {
@@ -420,6 +386,8 @@ impl Tree {
         }
         free_leaves
     }
+    
+    #[cfg(test)]
     pub fn print(&self, message: &str) {
         use crate::utils::*;
         let factor = 3;

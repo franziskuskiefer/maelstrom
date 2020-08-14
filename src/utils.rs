@@ -34,6 +34,7 @@ pub(crate) fn zero(length: usize) -> Vec<u8> {
     result
 }
 
+#[cfg(test)]
 pub(crate) fn bytes_to_hex(bytes: &[u8]) -> String {
     let mut hex = String::new();
     for b in bytes {

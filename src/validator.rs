@@ -52,10 +52,10 @@ impl<'a> Validator<'a, Group> {
                 if removed.as_usize() % 2 != 0 {
                     return false;
                 }
-                if removed >= self.group.tree.tree_size() {
+                if removed >= self.group.get_tree().tree_size() {
                     return false;
                 }
-                if self.group.tree.nodes[removed.as_usize()].is_blank() {
+                if self.group.get_tree().nodes[removed.as_usize()].is_blank() {
                     return false;
                 }
                 true

@@ -9,7 +9,7 @@ use maelstrom::group::*;
 fn padding() {
     let ciphersuite =
         Ciphersuite::new(CiphersuiteName::MLS10_128_DHKEMX25519_CHACHA20POLY1305_SHA256_Ed25519);
-    let alice_identity = Identity::new(ciphersuite, vec![1, 2, 3]);
+    let alice_identity = Identity::new(ciphersuite, &[1, 2, 3]);
 
     let config = GroupConfig::new(ciphersuite);
     let mut group_alice = Group::new(alice_identity, GroupId::random(), config);
