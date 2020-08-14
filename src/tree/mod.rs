@@ -192,20 +192,20 @@ pub struct OwnLeaf {
 
 impl OwnLeaf {
     pub fn new(
-        ciphersuite: Ciphersuite,
+        ciphersuite: &Ciphersuite,
         kpb: KeyPackageBundle,
         leaf_index: NodeIndex,
         path_keypairs: PathKeypairs,
     ) -> Self {
         Self {
-            ciphersuite,
+            ciphersuite: *ciphersuite,
             kpb,
             leaf_index,
             path_keypairs,
         }
     }
     pub fn generate_path_secrets(
-        ciphersuite: Ciphersuite,
+        ciphersuite: &Ciphersuite,
         start_secret: &[u8],
         n: usize,
     ) -> (Vec<Vec<u8>>, CommitSecret) {
@@ -227,7 +227,7 @@ impl OwnLeaf {
         (path_secrets, commit_secret)
     }
     pub fn continue_path_secrets(
-        ciphersuite: Ciphersuite,
+        ciphersuite: &Ciphersuite,
         intermediate_secret: &[u8],
         n: usize,
     ) -> (Vec<Vec<u8>>, CommitSecret) {
@@ -248,7 +248,7 @@ impl OwnLeaf {
         (path_secrets, commit_secret)
     }
     pub fn generate_path_keypairs(
-        ciphersuite: Ciphersuite,
+        ciphersuite: &Ciphersuite,
         path_secrets: Vec<Vec<u8>>,
     ) -> Vec<HPKEKeyPair> {
         let hash_len = ciphersuite.hash_length();
@@ -270,7 +270,7 @@ pub struct Tree {
 }
 
 impl Tree {
-    pub fn new(ciphersuite: Ciphersuite, kpb: KeyPackageBundle) -> Tree {
+    pub fn new(ciphersuite: &Ciphersuite, kpb: KeyPackageBundle) -> Tree {
         let own_leaf = OwnLeaf::new(
             ciphersuite,
             kpb.clone(),
@@ -283,13 +283,13 @@ impl Tree {
             node: None,
         }];
         Tree {
-            ciphersuite,
+            ciphersuite: *ciphersuite,
             nodes,
             own_leaf,
         }
     }
     pub fn new_from_nodes(
-        ciphersuite: Ciphersuite,
+        ciphersuite: &Ciphersuite,
         kpb: KeyPackageBundle,
         node_options: &[Option<Node>],
         index: NodeIndex,
@@ -313,7 +313,7 @@ impl Tree {
         path_keypairs.add(keypairs, dirpath);
         let own_leaf = OwnLeaf::new(ciphersuite, kpb, index, path_keypairs);
         Tree {
-            ciphersuite,
+            ciphersuite: *ciphersuite,
             nodes,
             own_leaf,
         }
@@ -386,7 +386,7 @@ impl Tree {
         }
         free_leaves
     }
-    
+
     #[cfg(test)]
     pub fn print(&self, message: &str) {
         use crate::utils::*;
@@ -508,8 +508,8 @@ impl Tree {
             .ciphersuite
             .hpke_open(hpke_ciphertext, &private_key, group_context, &[]);
         let (path_secrets, commit_secret) =
-            OwnLeaf::continue_path_secrets(self.own_leaf.ciphersuite, &secret, common_path.len());
-        let keypairs = OwnLeaf::generate_path_keypairs(self.own_leaf.ciphersuite, path_secrets);
+            OwnLeaf::continue_path_secrets(&self.own_leaf.ciphersuite, &secret, common_path.len());
+        let keypairs = OwnLeaf::generate_path_keypairs(&self.own_leaf.ciphersuite, path_secrets);
         let sender_path_offset = sender_dirpath.len() - common_path.len();
         for (i, keypair) in keypairs.iter().enumerate().take(common_path.len()) {
             // TODO return an error if public keys don't match
@@ -557,8 +557,8 @@ impl Tree {
         let dirpath_root = treemath::dirpath_root(own_index, self.leaf_count());
         let node_secret = private_key.as_slice();
         let (path_secrets, confirmation) =
-            OwnLeaf::generate_path_secrets(self.ciphersuite, &node_secret, dirpath_root.len());
-        let keypairs = OwnLeaf::generate_path_keypairs(self.ciphersuite, path_secrets.clone());
+            OwnLeaf::generate_path_secrets(&self.ciphersuite, &node_secret, dirpath_root.len());
+        let keypairs = OwnLeaf::generate_path_keypairs(&self.ciphersuite, path_secrets.clone());
 
         self.merge_keypairs(keypairs.clone(), dirpath_root.clone());
 
@@ -580,7 +580,7 @@ impl Tree {
         self.nodes[own_index.as_usize()] = Node::new_leaf(Some(kpb.get_key_package().clone()));
         let mut path_keypairs = PathKeypairs::new();
         path_keypairs.add(keypairs.clone(), dirpath_root);
-        let own_leaf = OwnLeaf::new(self.ciphersuite, kpb.clone(), own_index, path_keypairs);
+        let own_leaf = OwnLeaf::new(&self.ciphersuite, kpb.clone(), own_index, path_keypairs);
         self.own_leaf = own_leaf;
         if with_direct_path {
             (
@@ -689,7 +689,7 @@ impl Tree {
                     .find(|&kpb| kpb.get_key_package() == &update_proposal.key_package)
                     .unwrap();
                 self.own_leaf = OwnLeaf::new(
-                    self.ciphersuite,
+                    &self.ciphersuite,
                     own_kpb.clone(),
                     index,
                     PathKeypairs::new(),

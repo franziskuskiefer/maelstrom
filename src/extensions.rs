@@ -332,46 +332,6 @@ impl Codec for KeyPackageId {
     }
 }
 
-/*
-
-#[derive(PartialEq, Clone, Copy, Debug)]
-#[allow(non_camel_case_types)]
-#[repr(u16)]
-pub enum CipherSuite {
-    MLS10_128_HPKEX25519_AES128GCM_SHA256_Ed25519 = 1,
-    MLS10_128_HPKEP256_AES128GCM_SHA256_P256 = 2,
-    MLS10_128_HPKEX25519_CHACHA20POLY1305_SHA256_Ed25519 = 3,
-    MLS10_256_HPKEX448_AES256GCM_SHA512_Ed448 = 4,
-    MLS10_256_HPKEP521_AES256GCM_SHA512_P521 = 5,
-    MLS10_256_HPKEX448_CHACHA20POLY1305_SHA512_Ed448 = 6,
-    Default = 65535,
-}
-
-impl From<u16> for CipherSuite {
-    fn from(value: u16) -> Self {
-        match value {
-            1 => Ciphersuite::MLS10_128_HPKEX25519_AES128GCM_SHA256_Ed25519,
-            2 => Ciphersuite::MLS10_128_HPKEP256_AES128GCM_SHA256_P256,
-            3 => Ciphersuite::MLS10_128_HPKEX25519_CHACHA20POLY1305_SHA256_Ed25519,
-            4 => Ciphersuite::MLS10_256_HPKEX448_AES256GCM_SHA512_Ed448,
-            5 => Ciphersuite::MLS10_256_HPKEP521_AES256GCM_SHA512_P521,
-            6 => Ciphersuite::MLS10_256_HPKEX448_CHACHA20POLY1305_SHA512_Ed448,
-            _ => Ciphersuite::Default,
-        }
-    }
-}
-
-impl Codec for CipherSuite {
-    fn encode(&self, buffer: &mut Vec<u8>) -> Result<(), CodecError> {
-        (*self as u16).encode(buffer)?;
-        Ok(())
-    }
-    fn decode(cursor: &mut Cursor) -> Result<Self, CodecError> {
-        Ok(Ciphersuite::from(u16::decode(cursor)?))
-    }
-}
-*/
-
 #[test]
 fn test_protocol_version() {
     let mls10_version = ProtocolVersion::Mls10;

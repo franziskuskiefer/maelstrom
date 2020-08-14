@@ -31,7 +31,7 @@ pub enum ASError {
 }
 
 fn derive_app_secret(
-    ciphersuite: Ciphersuite,
+    ciphersuite: &Ciphersuite,
     secret: &[u8],
     label: &str,
     node: u32,
@@ -128,7 +128,7 @@ impl Codec for SenderRatchet {
 }
 
 impl SenderRatchet {
-    pub fn new(index: LeafIndex, secret: &[u8], ciphersuite: Ciphersuite) -> Self {
+    pub fn new(index: LeafIndex, secret: &[u8], ciphersuite: &Ciphersuite) -> Self {
         Self {
             ciphersuite,
             index,
@@ -228,7 +228,7 @@ impl Codec for ASTree {
 }
 
 impl ASTree {
-    pub fn new(ciphersuite: Ciphersuite, application_secret: &[u8], size: LeafIndex) -> Self {
+    pub fn new(ciphersuite: &Ciphersuite, application_secret: &[u8], size: LeafIndex) -> Self {
         let root = root(size);
         let num_indices = NodeIndex::from(size).as_usize() - 1;
         let mut nodes: Vec<Option<ASTreeNode>> = Vec::with_capacity(num_indices);

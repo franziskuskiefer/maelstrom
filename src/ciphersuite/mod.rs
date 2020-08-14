@@ -344,7 +344,7 @@ impl HPKEPrivateKey {
 
 impl HPKEKeyPair {
     /// Build a new HPKE key pair from the given `bytes`.
-    pub(crate) fn from_slice(bytes: &[u8], ciphersuite: Ciphersuite) -> Self {
+    pub(crate) fn from_slice(bytes: &[u8], ciphersuite: &Ciphersuite) -> Self {
         let private_key = HPKEPrivateKey::from_slice(bytes);
         let public_key = private_key.public_key(ciphersuite.hpke_kem);
         Self {

@@ -18,11 +18,11 @@ use crate::framing::*;
 use crate::group::*;
 use crate::messages::*;
 
-pub struct Validator<'a, Group> {
-    group: &'a Group,
+pub struct Validator<'a, G> {
+    group: &'a G,
 }
 
-impl<'a> Validator<'a, Group> {
+impl<'a> Validator<'a, Group<'a>> {
     pub fn new(group: &'a Group) -> Self {
         Self { group }
     }

@@ -398,7 +398,7 @@ pub struct Confirmation(pub Vec<u8>);
 
 impl Confirmation {
     pub fn new(
-        ciphersuite: Ciphersuite,
+        ciphersuite: &Ciphersuite,
         confirmation_key: &[u8],
         confirmed_transcript_hash: &[u8],
     ) -> Self {
@@ -598,14 +598,14 @@ impl Codec for EncryptedGroupSecrets {
 }
 
 #[derive(Clone)]
-pub struct Welcome {
+pub struct Welcome<'a> {
     pub version: ProtocolVersion,
-    pub cipher_suite: Ciphersuite,
+    pub cipher_suite: &'a Ciphersuite,
     pub secrets: Vec<EncryptedGroupSecrets>,
     pub encrypted_group_info: Vec<u8>,
 }
 
-impl Codec for Welcome {
+impl<'a> Codec for Welcome<'a> {
     fn encode(&self, buffer: &mut Vec<u8>) -> Result<(), CodecError> {
         self.version.encode(buffer)?;
         self.cipher_suite.encode(buffer)?;
@@ -613,18 +613,18 @@ impl Codec for Welcome {
         encode_vec(VecSize::VecU32, buffer, &self.encrypted_group_info)?;
         Ok(())
     }
-    fn decode(cursor: &mut Cursor) -> Result<Self, CodecError> {
-        let version = ProtocolVersion::decode(cursor)?;
-        let cipher_suite = Ciphersuite::decode(cursor)?;
-        let secrets = decode_vec(VecSize::VecU32, cursor)?;
-        let encrypted_group_info = decode_vec(VecSize::VecU32, cursor)?;
-        Ok(Welcome {
-            version,
-            cipher_suite,
-            secrets,
-            encrypted_group_info,
-        })
-    }
+    // fn decode(cursor: &mut Cursor) -> Result<Self, CodecError> {
+    //     let version = ProtocolVersion::decode(cursor)?;
+    //     let cipher_suite = Ciphersuite::decode(cursor)?;
+    //     let secrets = decode_vec(VecSize::VecU32, cursor)?;
+    //     let encrypted_group_info = decode_vec(VecSize::VecU32, cursor)?;
+    //     Ok(Welcome {
+    //         version,
+    //         cipher_suite,
+    //         secrets,
+    //         encrypted_group_info,
+    //     })
+    // }
 }
 
-pub type WelcomeBundle = (Welcome, Extension);
+pub type WelcomeBundle<'a> = (Welcome<'a>, Extension);

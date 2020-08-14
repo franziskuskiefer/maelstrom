@@ -155,7 +155,7 @@ impl MLSCiphertext {
             None => sender_data.sender.as_u32().encode_detached().unwrap(),
         };
         let mut handshake_nonce_input = hkdf_expand_label(
-            config.ciphersuite,
+            &config.ciphersuite,
             &epoch_secrets.handshake_secret,
             "hs nonce",
             &sender_id,
@@ -167,7 +167,7 @@ impl MLSCiphertext {
         }
         let handshake_nonce = AeadNonce::from_slice(&handshake_nonce_input);
         let handshake_key_input = hkdf_expand_label(
-            config.ciphersuite,
+            &config.ciphersuite,
             &epoch_secrets.handshake_secret,
             "hs key",
             &sender_id,
@@ -183,7 +183,7 @@ impl MLSCiphertext {
         context: &GroupContext,
         config: GroupConfig,
     ) -> MLSCiphertext {
-        let ciphersuite = config.ciphersuite;
+        let ciphersuite = &config.ciphersuite;
         let generation = astree.get_generation(mls_plaintext.sender.sender);
         let application_secrets = astree
             .get_secret(mls_plaintext.sender.sender, generation)
@@ -296,7 +296,7 @@ impl MLSCiphertext {
         let ciphersuite = config.ciphersuite;
         let sender_data_nonce = AeadNonce::from_slice(&self.sender_data_nonce);
         let sender_data_key_bytes = hkdf_expand_label(
-            config.ciphersuite,
+            &config.ciphersuite,
             &epoch_secrets.sender_data_secret,
             "sd key",
             &[],

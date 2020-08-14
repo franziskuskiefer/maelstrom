@@ -31,7 +31,7 @@ pub enum ASError {
 }
 
 fn derive_app_secret(
-    ciphersuite: Ciphersuite,
+    ciphersuite: &Ciphersuite,
     secret: &[u8],
     label: &str,
     node: u32,
@@ -78,11 +78,11 @@ impl Codec for ApplicationContext {
         self.generation.encode(buffer)?;
         Ok(())
     }
-    fn decode(cursor: &mut Cursor) -> Result<Self, CodecError> {
-        let node = u32::decode(cursor)?;
-        let generation = u32::decode(cursor)?;
-        Ok(ApplicationContext { node, generation })
-    }
+    // fn decode(cursor: &mut Cursor) -> Result<Self, CodecError> {
+    //     let node = u32::decode(cursor)?;
+    //     let generation = u32::decode(cursor)?;
+    //     Ok(ApplicationContext { node, generation })
+    // }
 }
 
 #[derive(Clone)]
@@ -90,46 +90,46 @@ pub struct ASTreeNode {
     pub secret: Vec<u8>,
 }
 
-pub struct SenderRatchet {
-    ciphersuite: Ciphersuite,
+struct SenderRatchet<'a> {
+    ciphersuite: &'a Ciphersuite,
     index: LeafIndex,
     generation: u32,
     past_secrets: Vec<Vec<u8>>,
 }
 
-impl Codec for SenderRatchet {
-    fn encode(&self, buffer: &mut Vec<u8>) -> Result<(), CodecError> {
-        self.ciphersuite.encode(buffer)?;
-        self.index.as_u32().encode(buffer)?;
-        self.generation.encode(buffer)?;
-        let len = self.past_secrets.len();
-        (len as u32).encode(buffer)?;
-        for i in 0..len {
-            encode_vec(VecSize::VecU8, buffer, &self.past_secrets[i])?;
-        }
-        Ok(())
-    }
-    fn decode(cursor: &mut Cursor) -> Result<Self, CodecError> {
-        let ciphersuite = Ciphersuite::decode(cursor)?;
-        let index = LeafIndex::from(u32::decode(cursor)?);
-        let generation = u32::decode(cursor)?;
-        let len = u32::decode(cursor)? as usize;
-        let mut past_secrets = vec![];
-        for _ in 0..len {
-            let secret = decode_vec(VecSize::VecU8, cursor)?;
-            past_secrets.push(secret);
-        }
-        Ok(SenderRatchet {
-            ciphersuite,
-            index,
-            generation,
-            past_secrets,
-        })
-    }
-}
+// impl Codec for SenderRatchet {
+//     fn encode(&self, buffer: &mut Vec<u8>) -> Result<(), CodecError> {
+//         self.ciphersuite.encode(buffer)?;
+//         self.index.as_u32().encode(buffer)?;
+//         self.generation.encode(buffer)?;
+//         let len = self.past_secrets.len();
+//         (len as u32).encode(buffer)?;
+//         for i in 0..len {
+//             encode_vec(VecSize::VecU8, buffer, &self.past_secrets[i])?;
+//         }
+//         Ok(())
+//     }
+//     fn decode(cursor: &mut Cursor) -> Result<Self, CodecError> {
+//         let ciphersuite = Ciphersuite::decode(cursor)?;
+//         let index = LeafIndex::from(u32::decode(cursor)?);
+//         let generation = u32::decode(cursor)?;
+//         let len = u32::decode(cursor)? as usize;
+//         let mut past_secrets = vec![];
+//         for _ in 0..len {
+//             let secret = decode_vec(VecSize::VecU8, cursor)?;
+//             past_secrets.push(secret);
+//         }
+//         Ok(SenderRatchet {
+//             ciphersuite,
+//             index,
+//             generation,
+//             past_secrets,
+//         })
+//     }
+// }
 
-impl SenderRatchet {
-    pub fn new(index: LeafIndex, secret: &[u8], ciphersuite: Ciphersuite) -> Self {
+impl<'a> SenderRatchet<'a> {
+    pub fn new(index: LeafIndex, secret: &[u8], ciphersuite: &'a Ciphersuite) -> Self {
         Self {
             ciphersuite,
             index,
@@ -167,7 +167,7 @@ impl SenderRatchet {
     }
     fn ratchet_secret(&self, secret: &[u8]) -> Vec<u8> {
         derive_app_secret(
-            self.ciphersuite,
+            &self.ciphersuite,
             secret,
             "app-secret",
             self.index.as_u32(),
@@ -177,7 +177,7 @@ impl SenderRatchet {
     }
     fn derive_key_nonce(&self, secret: &[u8], generation: u32) -> ApplicationSecrets {
         let nonce = derive_app_secret(
-            self.ciphersuite,
+            &self.ciphersuite,
             secret,
             "app-nonce",
             self.index.as_u32(),
@@ -185,7 +185,7 @@ impl SenderRatchet {
             self.ciphersuite.aead_nonce_length(),
         );
         let key = derive_app_secret(
-            self.ciphersuite,
+            &self.ciphersuite,
             secret,
             "app-key",
             self.index.as_u32(),
@@ -199,37 +199,37 @@ impl SenderRatchet {
     }
 }
 
-pub struct ASTree {
-    ciphersuite: Ciphersuite,
+pub struct ASTree<'a> {
+    ciphersuite: &'a Ciphersuite,
     nodes: Vec<Option<ASTreeNode>>,
-    sender_ratchets: Vec<Option<SenderRatchet>>,
+    sender_ratchets: Vec<Option<SenderRatchet<'a>>>,
     size: LeafIndex,
 }
 
-impl Codec for ASTree {
-    fn encode(&self, buffer: &mut Vec<u8>) -> Result<(), CodecError> {
-        self.ciphersuite.encode(buffer)?;
-        encode_vec(VecSize::VecU32, buffer, &self.nodes)?;
-        encode_vec(VecSize::VecU32, buffer, &self.sender_ratchets)?;
-        self.size.as_u32().encode(buffer)?;
-        Ok(())
-    }
-    fn decode(cursor: &mut Cursor) -> Result<Self, CodecError> {
-        let ciphersuite = Ciphersuite::decode(cursor)?;
-        let nodes = decode_vec(VecSize::VecU32, cursor)?;
-        let sender_ratchets = decode_vec(VecSize::VecU32, cursor)?;
-        let size = LeafIndex::from(u32::decode(cursor)?);
-        Ok(ASTree {
-            ciphersuite,
-            nodes,
-            sender_ratchets,
-            size,
-        })
-    }
-}
+// impl Codec for ASTree {
+//     fn encode(&self, buffer: &mut Vec<u8>) -> Result<(), CodecError> {
+//         self.ciphersuite.encode(buffer)?;
+//         encode_vec(VecSize::VecU32, buffer, &self.nodes)?;
+//         encode_vec(VecSize::VecU32, buffer, &self.sender_ratchets)?;
+//         self.size.as_u32().encode(buffer)?;
+//         Ok(())
+//     }
+//     fn decode(cursor: &mut Cursor) -> Result<Self, CodecError> {
+//         let ciphersuite = Ciphersuite::decode(cursor)?;
+//         let nodes = decode_vec(VecSize::VecU32, cursor)?;
+//         let sender_ratchets = decode_vec(VecSize::VecU32, cursor)?;
+//         let size = LeafIndex::from(u32::decode(cursor)?);
+//         Ok(ASTree {
+//             ciphersuite,
+//             nodes,
+//             sender_ratchets,
+//             size,
+//         })
+//     }
+// }
 
-impl ASTree {
-    pub fn new(ciphersuite: Ciphersuite, application_secret: &[u8], size: LeafIndex) -> Self {
+impl<'a> ASTree<'a> {
+    pub fn new(ciphersuite: &'a Ciphersuite, application_secret: &[u8], size: LeafIndex) -> Self {
         let root = root(size);
         let num_indices = NodeIndex::from(size).as_usize() - 1;
         let mut nodes: Vec<Option<ASTreeNode>> = Vec::with_capacity(num_indices);
@@ -299,7 +299,7 @@ impl ASTree {
         let left_index = left(index_in_tree);
         let right_index = right(index_in_tree, self.size);
         let left_secret = derive_app_secret(
-            self.ciphersuite,
+            &self.ciphersuite,
             &node_secret,
             "tree",
             left_index.as_u32(),
@@ -307,7 +307,7 @@ impl ASTree {
             hash_len,
         );
         let right_secret = derive_app_secret(
-            self.ciphersuite,
+            &self.ciphersuite,
             &node_secret,
             "tree",
             right_index.as_u32(),
