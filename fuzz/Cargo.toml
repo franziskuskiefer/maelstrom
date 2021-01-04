@@ -1,0 +1,49 @@
+[package]
+name = "openmls-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+edition = "2018"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.3"
+
+[dependencies.openmls]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "welcome_decode"
+path = "fuzz_targets/welcome_decode.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "key_package_decode"
+path = "fuzz_targets/key_package_decode.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "mls_plaintext_decode"
+path = "fuzz_targets/mls_plaintext_decode.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "mls_ciphertext_decode"
+path = "fuzz_targets/mls_ciphertext_decode.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "proposal_decode"
+path = "fuzz_targets/proposal_decode.rs"
+test = false
+doc = false

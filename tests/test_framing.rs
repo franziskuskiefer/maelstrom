@@ -1,45 +1,66 @@
-mod test_utils;
-use test_utils::*;
-
-use maelstrom::ciphersuite::*;
-use maelstrom::creds::*;
-use maelstrom::group::*;
-use maelstrom::key_packages::*;
+use openmls::prelude::*;
+mod utils;
+use utils::*;
 
 #[test]
 fn padding() {
-    let ciphersuite_name = CiphersuiteName::MLS10_128_DHKEMX25519_AES128GCM_SHA256_Ed25519;
-    let ciphersuite = Ciphersuite::new(ciphersuite_name);
-    let id = vec![1, 2, 3];
-    let identity = Identity::new(ciphersuite, vec![1, 2, 3]);
-    let signature_keypair = ciphersuite.new_signature_keypair();
-    let credential = Credential::Basic(BasicCredential::from(&identity));
-    let kpb = KeyPackageBundle::new(
-        ciphersuite,
-        signature_keypair.get_private_key(),
-        credential,
-        None,
-    );
+    pretty_env_logger::init_timed();
 
-    let mut group_alice = MlsGroup::new(&id, ciphersuite, kpb.into_tuple());
+    // Create a test config for a single client supporting all possible
+    // ciphersuites.
+    let alice_config = TestClientConfig {
+        name: "alice",
+        ciphersuites: Config::supported_ciphersuite_names(),
+    };
+
+    let mut test_group_configs = Vec::new();
+
+    // Create a group config for each ciphersuite.
+    for ciphersuite_name in Config::supported_ciphersuite_names() {
+        let test_group = TestGroupConfig {
+            ciphersuite: ciphersuite_name,
+            config: GroupConfig::default(),
+            members: vec![alice_config.clone()],
+        };
+        test_group_configs.push(test_group);
+    }
+
+    // Create the test setup config.
+    let test_setup_config = TestSetupConfig {
+        clients: vec![alice_config],
+        groups: test_group_configs,
+    };
+
+    // Initialize the test setup according to config.
+    let test_setup = setup(test_setup_config);
+
+    let test_clients = test_setup.clients.borrow();
+    let alice = test_clients.get("alice").unwrap().borrow();
+
     const PADDING_SIZE: usize = 10;
 
-    for _ in 0..100 {
-        let message = randombytes(random_usize() % 1000);
-        let aad = randombytes(random_usize() % 1000);
-        let mls_plaintext = group_alice.create_application_message(
-            &aad,
-            &message,
-            signature_keypair.get_private_key(),
-        );
-        let encrypted_message = group_alice.encrypt(mls_plaintext).as_slice();
-        let length = encrypted_message.len();
-        let overflow = length % PADDING_SIZE;
-        if overflow != 0 {
-            panic!(
-                "Error: padding overflow of {} bytes, message length: {}, padding block size: {}",
-                overflow, length, PADDING_SIZE
-            );
+    // Create a message in each group and test the padding.
+    for group_state in alice.group_states.borrow_mut().values_mut() {
+        let credential_bundle = alice
+            .credential_bundles
+            .get(&group_state.ciphersuite().name())
+            .unwrap();
+        for _ in 0..100 {
+            let message = randombytes(random_usize() % 1000);
+            let aad = randombytes(random_usize() % 1000);
+            let encrypted_message = group_state
+                .create_application_message(&aad, &message, &credential_bundle)
+                .unwrap()
+                .ciphertext;
+            let ciphertext = encrypted_message.as_slice();
+            let length = ciphertext.len();
+            let overflow = length % PADDING_SIZE;
+            if overflow != 0 {
+                panic!(
+                    "Error: padding overflow of {} bytes, message length: {}, padding block size: {}",
+                    overflow, length, PADDING_SIZE
+                );
+            }
         }
     }
 }

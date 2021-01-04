@@ -1,43 +1,115 @@
-// maelstrom
-// Copyright (C) 2020 Raphael Robert
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see http://www.gnu.org/licenses/.
+//! # MLS Group errors
+//!
+//! `WelcomeError`, `ApplyCommitError`, `DecryptionError`, and
+//! `CreateCommitError`.
 
-pub enum WelcomeError {
-    CiphersuiteMismatch = 100,
-    JoinerSecretNotFound = 101,
-    MissingRatchetTree = 102,
-    TreeHashMismatch = 103,
-    JoinerNotInTree = 104,
-    ConfirmationTagMismatch = 105,
-    InvalidRatchetTree = 106,
-    InvalidGroupInfoSignature = 107,
-    GroupInfoDecryptionFailure = 108,
+use crate::ciphersuite::CryptoError;
+use crate::config::ConfigError;
+use crate::framing::errors::MLSCiphertextError;
+use crate::messages::errors::ProposalQueueError;
+use crate::tree::{secret_tree::SecretTypeError, TreeError};
+
+implement_error! {
+    pub enum GroupError {
+        MLSCiphertextError(MLSCiphertextError) =
+            "See [`MLSCiphertextError`](`crate::framing::errors::MLSCiphertextError`) for details",
+        WelcomeError(WelcomeError) =
+            "See [`WelcomeError`](`WelcomeError`) for details",
+        ApplyCommitError(ApplyCommitError) =
+            "See [`ApplyCommitError`](`ApplyCommitError`) for details",
+        CreateCommitError(CreateCommitError) =
+            "See [`CreateCommitError`](`CreateCommitError`) for details",
+        ConfigError(ConfigError) =
+            "See [`ConfigError`](`crate::config::ConfigError`) for details",
+        ExporterError(ExporterError) =
+            "See [`ExporterError`](`ExporterError`) for details",
+        SecretTypeError(SecretTypeError) =
+            "See [`SecretTypeError`](`crate::tree::secret_tree::SecretTypeError`) for details",
+            ProposalQueueError(ProposalQueueError) =
+        "See [`ProposalQueueError`](`crate::messages::errors::ProposalQueueError`) for details",
+    }
 }
 
-pub enum ApplyCommitError {
-    EpochMismatch = 200,
-    WrongPlaintextContentType = 201,
-    SelfRemoved = 202,
-    PathKeyPackageVerificationFailure = 203,
-    NoParentHashExtension = 204,
-    ParentHashMismatch = 205,
-    PlaintextSignatureFailure = 206,
-    RequiredPathNotFound = 207,
-    ConfirmationTagMismatch = 208,
+implement_error! {
+    pub enum WelcomeError {
+        Simple {
+            CiphersuiteMismatch =
+                "Ciphersuites in the Welcome message and the corresponding key package bundle don't match.",
+            JoinerSecretNotFound =
+                "No joiner secret found in the Welcome message.",
+            MissingRatchetTree =
+                "No ratchet tree available to build initial tree after receiving a Welcome message.",
+            TreeHashMismatch =
+                "The computed tree hash does not match the one in the GroupInfo.",
+            ConfirmationTagMismatch =
+                "The computed confirmation tag does not match the expected one.",
+            InvalidGroupInfoSignature =
+                "The signature on the GroupInfo is not valid.",
+            GroupInfoDecryptionFailure =
+                "Unable to decrypt the GroupInfo.",
+            DuplicateRatchetTreeExtension =
+                "Found a duplicate ratchet tree extension in the Welcome message.",
+            UnsupportedMlsVersion =
+                "The Welcome message uses an unsupported MLS version.",
+            UnknownError =
+                "An unknown error occurred.",
+        }
+        Complex {
+            InvalidRatchetTree(TreeError) =
+                "Invalid ratchet tree in Welcome message.",
+            GroupSecretsDecryptionFailure(CryptoError) =
+                "Unable to decrypt the EncryptedGroupSecrets.",
+        }
+    }
 }
 
-pub enum CreateCommitError {
-    CannotRemoveSelf = 300,
+implement_error! {
+    pub enum ApplyCommitError {
+        Simple {
+            EpochMismatch =
+                "Couldn't apply Commit. The epoch of the group context and MLSPlaintext didn't match.",
+            WrongPlaintextContentType =
+                "apply_commit_internal was called with an MLSPlaintext that is not a Commit.",
+            SelfRemoved =
+                "Tried to apply a commit to a group we are not a part of.",
+            PathKeyPackageVerificationFailure =
+                "Unable to verify the key package signature.",
+            NoParentHashExtension =
+                "Parent hash extension is missing.",
+            ParentHashMismatch =
+                "Parent hash values don't match.",
+            PlaintextSignatureFailure =
+                "MLSPlaintext signature is invalid.",
+            RequiredPathNotFound =
+                "Unable to determine commit path.",
+            ConfirmationTagMismatch =
+                "Confirmation tag is invalid.",
+            MissingOwnKeyPackage =
+                "No key package provided to apply own commit.",
+            MissingProposal =
+                "The proposal queue is missing a proposal for the commit.",
+            OwnKeyNotFound =
+                  "Missing own key to apply proposal.",
+        }
+        Complex {
+            DecryptionFailure(TreeError) =
+                "A matching EncryptedPathSecret failed to decrypt.",
+        }
+    }
+}
+
+implement_error! {
+    pub enum CreateCommitError {
+        CannotRemoveSelf =
+            "The Commit tried to remove self from the group. This is not possible.",
+        OwnKeyNotFound =
+            "Couldn't create the commit because there's no key to apply the proposals.",
+    }
+}
+
+implement_error! {
+    pub enum ExporterError {
+        KeyLengthTooLong =
+            "The requested key length is not supported (too large).",
+    }
 }

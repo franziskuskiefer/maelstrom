@@ -1,19 +1,3 @@
-// maelstrom
-// Copyright (C) 2020 Raphael Robert
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see http://www.gnu.org/licenses/.
-
 //! Group APIs for MLS
 //!
 //! This file contains the API to interact with groups.
@@ -21,7 +5,7 @@
 //! The low-level standard API is described in the `Api` trait.\
 //! The high-level API is exposed in `ManagedGroup`.
 
-mod errors;
+pub mod errors;
 mod managed_group;
 mod mls_group;
 
@@ -30,22 +14,16 @@ use crate::codec::*;
 use crate::tree::*;
 use crate::utils::*;
 
+pub(crate) use serde::{Deserialize, Serialize};
+
 pub use codec::*;
-pub use errors::*;
+pub(crate) use errors::{
+    ApplyCommitError, CreateCommitError, ExporterError, GroupError, WelcomeError,
+};
 pub use managed_group::*;
 pub use mls_group::*;
 
-pub enum GroupError {
-    Codec(CodecError),
-}
-
-impl From<CodecError> for GroupError {
-    fn from(err: CodecError) -> GroupError {
-        GroupError::Codec(err)
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Hash, Eq, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GroupId {
     pub value: Vec<u8>,
 }
@@ -77,7 +55,7 @@ impl Codec for GroupId {
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub struct GroupEpoch(pub u64);
 
 impl GroupEpoch {
@@ -97,7 +75,7 @@ impl Codec for GroupEpoch {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GroupContext {
     pub group_id: GroupId,
     pub epoch: GroupEpoch,
@@ -106,6 +84,20 @@ pub struct GroupContext {
 }
 
 impl GroupContext {
+    /// Create the `GroupContext` needed upon creation of a new group.
+    pub fn create_initial_group_context(
+        ciphersuite: &Ciphersuite,
+        group_id: GroupId,
+        tree_hash: Vec<u8>,
+    ) -> Self {
+        GroupContext {
+            group_id,
+            epoch: GroupEpoch(0),
+            tree_hash,
+            confirmed_transcript_hash: zero(ciphersuite.hash_length()),
+        }
+    }
+
     pub fn serialize(&self) -> Vec<u8> {
         self.encode_detached().unwrap()
     }
@@ -133,23 +125,19 @@ impl Codec for GroupContext {
     }
 }
 
-#[derive(Clone, Copy)]
+/// Configuration for an MLS group.
+#[derive(Clone, Copy, Debug)]
 pub struct GroupConfig {
-    pub(crate) padding_block_size: u32,
-    pub(crate) additional_as_epochs: u32,
+    /// Flag whether to send the ratchet tree along with the `GroupInfo` or not.
+    /// Defaults to false.
+    pub add_ratchet_tree_extension: bool,
+    pub padding_block_size: u32,
+    pub additional_as_epochs: u32,
 }
 
 impl GroupConfig {
-    /// Create a new `GroupConfig` with the given ciphersuite.
-    pub fn new() -> Self {
-        Self {
-            padding_block_size: 10,
-            additional_as_epochs: 0,
-        }
-    }
-
     /// Get the padding block size used in this config.
-    pub fn get_padding_block_size(&self) -> u32 {
+    pub fn padding_block_size(&self) -> u32 {
         self.padding_block_size
     }
 }
@@ -157,6 +145,7 @@ impl GroupConfig {
 impl Default for GroupConfig {
     fn default() -> Self {
         Self {
+            add_ratchet_tree_extension: false,
             padding_block_size: 10,
             additional_as_epochs: 0,
         }
@@ -173,6 +162,7 @@ impl Codec for GroupConfig {
         let padding_block_size = u32::decode(cursor)?;
         let additional_as_epochs = u32::decode(cursor)?;
         Ok(GroupConfig {
+            add_ratchet_tree_extension: false,
             padding_block_size,
             additional_as_epochs,
         })
